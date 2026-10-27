@@ -1,4 +1,4 @@
-package in.gov.indiapost.mailssorting
+package `in`.gov.indiapost.mailssorting
 
 import android.annotation.SuppressLint
 import android.app.Activity
