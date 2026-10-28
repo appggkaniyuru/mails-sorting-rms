@@ -76,8 +76,7 @@ class MainActivity : Activity() {
         errorText.visibility = View.GONE
         webView.visibility = View.VISIBLE
         progress.visibility = View.VISIBLE
-        webView.loadUrl("https://script.google.com/macros/s/AKfycbw6RQ1KlHiEM_9XOT6tsMHw25tuewjtASpwHoIroBWl9HW4QVVDHzOIY2R7vd36sSIt/exec")
-    }
+        webView.loadUrl("https://appggkaniyuru.github.io/mails-sorting-rms/")
 
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
