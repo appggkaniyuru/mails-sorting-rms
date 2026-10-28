@@ -1,114 +1,140 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0757a6">
-<title>RMS Sorting | All India PIN & Hub Mapping</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-:root{--navy:#052d55;--blue:#0867d8;--blue2:#0b4f9c;--bg:#eef4fb;--ink:#183451;--muted:#64758b;--line:#d8e4f0;--white:#fff;--green:#16984b;--orange:#ef8215;--red:#d92d38;--purple:#6b48cf;--shadow:0 8px 26px rgba(22,57,96,.10)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 "Segoe UI",Arial,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:650}button:disabled{opacity:.5;cursor:not-allowed}.hidden{display:none!important}
-.topbar{min-height:116px;padding:18px 24px;color:#fff;background:linear-gradient(115deg,#064b93,#0879df 55%,#06305d);display:flex;align-items:center;justify-content:space-between;gap:18px;position:relative;overflow:hidden}.topbar:after{content:"✈  ▰  ✉";position:absolute;right:24%;top:6px;font-size:52px;opacity:.13;letter-spacing:10px;pointer-events:none}.brand{display:flex;align-items:center;gap:14px;z-index:1}.brandmark{height:62px;width:62px;border-radius:15px;background:#fff;color:#0757a6;display:grid;place-items:center;font-size:31px;box-shadow:0 3px 12px #00254c55}.brand h1{margin:0;font-size:clamp(22px,3vw,34px);letter-spacing:.2px}.brand p{margin:3px 0 0;color:#d9ebff;font-size:15px}.topright{z-index:1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}.userchip{background:#fff;color:#12395f;border-radius:999px;padding:9px 14px;font-weight:650;max-width:300px;overflow-wrap:anywhere}.logout{background:#e62c38;color:#fff}
-.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 116px)}.sidebar{background:linear-gradient(180deg,#073b70,#052849);padding:16px 10px;color:#fff}.navbtn{width:100%;display:flex;gap:12px;align-items:center;text-align:left;background:transparent;color:#e7f3ff;margin:3px 0;padding:12px;border-radius:10px;font-weight:600}.navbtn .ico{font-size:21px;width:28px;text-align:center}.navbtn.active,.navbtn:hover{background:#0873e7;color:#fff}.sidefoot{margin:24px 5px 0;padding:15px 12px;background:#ffffff12;border:1px solid #ffffff18;border-radius:12px;color:#d9eaff;font-size:12px}
-main{padding:20px;min-width:0}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.stat{padding:16px;border-radius:14px;color:#fff;box-shadow:var(--shadow);min-height:88px}.stat small{display:block;opacity:.92;font-size:12px}.stat strong{display:block;font-size:24px;margin-top:5px}.sblue{background:linear-gradient(120deg,#0876f9,#0753b7)}.sgreen{background:linear-gradient(120deg,#1ab45d,#108042)}.sorange{background:linear-gradient(120deg,#ff9a20,#ed6a05)}.spurple{background:linear-gradient(120deg,#8a5cf6,#6338bd)}
-.panel{background:#fff;border:1px solid var(--line);border-radius:15px;box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}.panelhead{padding:14px 18px;background:linear-gradient(90deg,#e1efff,#f7fbff);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.panelhead h2{margin:0;font-size:18px;color:#084b91}.panelbody{padding:16px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab{background:#edf3fa;color:#294b6d;border:1px solid #d6e2ef}.tab.active{background:#0867d8;color:#fff;border-color:#0867d8}.searchrow{display:grid;grid-template-columns:minmax(180px,1.3fr) minmax(150px,1fr) auto;gap:10px;align-items:end}.field{display:flex;flex-direction:column;gap:6px;min-width:0}.field label{font-weight:650;color:#244565}.field input,.field select,.field textarea{width:100%;border:1px solid #c8d8e8;border-radius:9px;padding:11px 12px;background:#fff;color:#183451;outline:none}.field input:focus,.field select:focus,.field textarea:focus{border-color:#1678df;box-shadow:0 0 0 3px #1678df20}.primary{background:#0867d8;color:#fff}.success{background:#15964a;color:#fff}.danger{background:#d92d38;color:#fff}.light{background:#e9f2fc;color:#17466f;border:1px solid #d1e0ef}.muted{color:var(--muted)}.notice{padding:11px 13px;border-radius:9px;background:#eef6ff;color:#17466f;border:1px solid #d5e7fb;margin:10px 0}.notice.error{background:#fff0f0;color:#9c1f29;border-color:#ffd2d2}.notice.ok{background:#effbf3;color:#116b35;border-color:#c6efd2}.resultgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(250px,.8fr);gap:14px}.detailtable{width:100%;border-collapse:collapse}.detailtable th,.detailtable td{padding:9px 10px;border:1px solid #e0e9f2;text-align:left;vertical-align:top;overflow-wrap:anywhere}.detailtable th{width:35%;background:#f5f9fe;font-weight:650}.tag{display:inline-block;border-radius:999px;padding:4px 9px;background:#e6f2ff;color:#0757a6;font-weight:700;font-size:12px}.mini-card{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}.mini-card h3{margin:0;padding:11px 13px;font-size:15px;background:#eaf4ff;color:#0757a6}.mini-card .inside{padding:14px}.mini-card.orange h3{background:#fff0df;color:#b95105}.mini-card.green h3{background:#e5f8ec;color:#08743b}.hubvalue{font-size:19px;font-weight:750}.tablewrap{overflow:auto}table.data{width:100%;border-collapse:collapse;min-width:680px}table.data th,table.data td{border-bottom:1px solid #e3ebf3;padding:10px 12px;text-align:left;vertical-align:top}table.data th{background:#f4f8fd;color:#31506f;font-size:12px;text-transform:uppercase;letter-spacing:.3px}table.data tbody tr:hover{background:#f8fbff}.actions{display:flex;gap:6px;flex-wrap:wrap}.actions button{padding:6px 9px;font-size:12px}.status{font-size:12px;color:var(--muted);padding:6px 0}.modalback{position:fixed;inset:0;background:#061c35a8;display:grid;place-items:center;padding:16px;z-index:20}.modal{background:#fff;border-radius:16px;width:min(600px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 70px #001b3c55}.modalhead{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modalhead h2{margin:0;font-size:19px}.modalbody{padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:12px}.span2{grid-column:1/-1}.modalfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}.loginwrap{min-height:calc(100vh - 116px);display:grid;place-items:center;padding:20px}.loginbox{width:min(450px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:28px}.loginbox h2{margin:0 0 6px;color:#084b91}.loginbox .field{margin-top:14px}.loginbox .primary{width:100%;margin-top:18px;padding:12px}.empty{text-align:center;padding:30px;color:var(--muted)}footer{text-align:center;color:#6b8095;font-size:12px;padding:8px 0 20px}
-@media(max-width:900px){.shell{grid-template-columns:76px minmax(0,1fr)}.sidebar{padding:12px 7px}.navbtn{justify-content:center;padding:12px 6px}.navbtn .label,.sidefoot{display:none}.navbtn .ico{width:auto}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.resultgrid{grid-template-columns:1fr}.searchrow{grid-template-columns:1fr 1fr}.searchrow button{grid-column:1/-1}}
-@media(max-width:600px){.topbar{padding:14px;align-items:flex-start}.brandmark{width:46px;height:46px;font-size:24px}.brand p{font-size:12px}.userchip{display:none}.shell{grid-template-columns:1fr}.sidebar{display:flex;overflow:auto;padding:6px;gap:4px;position:sticky;top:0;z-index:5}.navbtn{width:auto;min-width:58px;margin:0;flex-direction:column;gap:2px;font-size:10px}.navbtn .label{display:block;text-align:center}.navbtn .ico{font-size:19px}.main{padding:12px}main{padding:12px}.stats{gap:8px}.stat{padding:12px;min-height:76px}.stat strong{font-size:20px}.panelbody{padding:12px}.searchrow{grid-template-columns:1fr}.searchrow button{grid-column:auto}.modalbody{grid-template-columns:1fr}.span2{grid-column:auto}.brand h1{font-size:21px}.topright{gap:5px}.logout{padding:8px 10px}}
-</style>
-</head>
-<body>
-<header class="topbar">
-  <div class="brand"><div class="brandmark">✉</div><div><h1>RMS Sorting</h1><p>All India PIN Code &amp; Hub Mapping</p></div></div>
-  <div class="topright"><span class="userchip">Public PIN Search</span></div>
-</header>
-<div id="appView" class="shell">
-  <aside class="sidebar">
-    <button class="navbtn active" data-page="home" onclick="showPage('home',this)"><span class="ico">⌂</span><span class="label">Home</span></button>
-    <button class="navbtn" data-page="search" onclick="showPage('search',this)"><span class="ico">⌕</span><span class="label">Search PIN</span></button>
-    <button class="navbtn" data-page="mapping" onclick="showPage('mapping',this)"><span class="ico">✈</span><span class="label">Hub Mapping</span></button>
-  </aside>
-  <main>
-    <div id="globalMessage" class="notice hidden"></div>
-    <section id="page-home">
-      <div class="stats">
-        <div class="stat sblue"><small>All India PIN Codes</small><strong id="statPins">—</strong></div>
-        <div class="stat sgreen"><small>Post Offices</small><strong id="statOffices">—</strong></div>
-        <div class="stat sorange"><small>NSH / Parcel Hub</small><strong>Hub Mapping</strong></div>
-        <div class="stat spurple"><small>Air Codes</small><strong>Flight Codes</strong></div>
-      </div>
-      <section class="panel"><div class="panelhead"><h2>Search PIN Code or Office</h2><span class="tag" id="roleTag">Authenticated</span></div><div class="panelbody">
-        <div class="tabs"><button class="tab active" id="homePinTab" onclick="setSearchMode('pin')">Search by PIN Code</button><button class="tab" id="homeOfficeTab" onclick="setSearchMode('office')">Search by Office Name</button></div>
-        <form id="homeSearchForm" class="searchrow"><div class="field"><label id="homeSearchLabel" for="homeSearchInput">PIN Code</label><input id="homeSearchInput" placeholder="Enter PIN Code" required></div><div class="field"><label for="homeLimit">Results</label><select id="homeLimit"><option>10</option><option>25</option><option>50</option></select></div><button class="primary" type="submit">⌕ Search</button></form>
-      </div></section>
-      <div id="homeResults"></div>
-    </section>
-    <section id="page-search" class="hidden">
-      <section class="panel"><div class="panelhead"><h2>PIN Code &amp; Office Search</h2></div><div class="panelbody">
-        <div class="tabs"><button class="tab active" id="pinTab" onclick="setSearchMode('pin')">Search by PIN Code</button><button class="tab" id="officeTab" onclick="setSearchMode('office')">Search by Office Name</button></div>
-        <form id="searchForm" class="searchrow"><div class="field"><label id="searchLabel" for="searchInput">PIN Code</label><input id="searchInput" placeholder="Enter PIN Code" required></div><div class="field"><label for="searchLimit">Results</label><select id="searchLimit"><option>10</option><option>25</option><option>50</option></select></div><button class="primary" type="submit">⌕ Search</button></form>
-      </div></section>
-      <div id="searchResults"></div>
-    </section>
-    <section id="page-delivery" class="hidden">
-      <section class="panel"><div class="panelhead"><h2>Delivery Places</h2></div><div class="panelbody">
-        <div class="notice">Delivery Places editing is not available in public no-login mode. Add/Edit/Delete remains protected by Supabase authentication and row-level security.</div>
-      </div></section>
-    </section>
-    <section id="page-mapping" class="hidden">
-      <section class="panel"><div class="panelhead"><h2>Hub Mapping &amp; Air Codes</h2></div><div class="panelbody"><p>Search using a PIN Code or Office Name to view NSH, ICH, Air Code, L1 Parcel Hub, L2 Parcel Hub, RMS L1 and RMS L2 fields from the master database.</p><button class="primary" onclick="showPage('search')">Open PIN Search</button></div></section>
-    </section>
-    <footer>RMS Sorting • All India PIN Code &amp; Hub Mapping</footer>
-  </main>
+<!DOCTYPE html><html lang="kn"><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+:root{--navy:#0967b2;--blue:#0967b2;--bg:#f1f6fc;--line:#d7e0e8;--text:#17212b}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Kannada",sans-serif;background:var(--bg);color:var(--text)}
+header{background:var(--navy);color:#fff;padding:16px 22px}header h1{margin:0 0 5px;font-size:22px}header p{margin:0;opacity:.95;font-size:13px}
+.brandrow{display:flex;align-items:center;gap:12px}.brandlogo{width:46px;height:46px;border-radius:10px;background:#fff;color:#075da5;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;text-align:center;line-height:1.1;flex-shrink:0}.brandtext h1{font-size:22px;margin:0 0 3px}.tabbar{display:flex;gap:8px;background:#fff;padding:10px 14px;border-bottom:1px solid var(--line)}.tabbtn{background:#e8eef5;color:#173b5a}.tabbtn.active{background:#ff8a20;color:#fff}.tabPage.hidden{display:none}
+main{max-width:1300px;margin:18px auto;padding:0 14px 30px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px;box-shadow:0 2px 8px #1020300b}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}input,select,textarea{width:100%;padding:10px 11px;border:1px solid #bccbd8;border-radius:7px;font:inherit;background:#fff}
+label{display:block;font-size:13px;font-weight:bold;margin-bottom:6px}.formgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.wide{grid-column:span 2}
+button{border:0;border-radius:7px;padding:10px 14px;font-weight:bold;cursor:pointer}.primary{background:var(--blue);color:white}.secondary{background:#e7eef5;color:#183b58}.danger{background:#ffeded;color:#9b1c1c}
+.search{flex:1;min-width:220px}.status{margin-top:10px;font-size:14px}.ok{color:#137044}.err{color:#a31e1e}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:950px;background:white}th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;font-size:13px;vertical-align:top}th{background:#e9f0f6;color:#173b5a;position:sticky;top:0}
+.actions{white-space:nowrap;display:flex;gap:6px}.count{font-size:13px;color:#526579;margin:10px 0}.hint{color:#526579;font-size:12px;line-height:1.5}.hidden{display:none}
+@media(max-width:800px){.formgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.wide{grid-column:span 2}header h1{font-size:19px}}
+@media(max-width:460px){.formgrid{grid-template-columns:1fr}.wide{grid-column:span 1}main{padding:0 8px 20px;margin-top:10px}.panel{padding:12px}}
+
+.ntdHero{max-width:760px;margin:0 auto 12px;background:#0967b2;color:#fff;padding:14px 16px 18px;border-radius:0 0 22px 22px}.ntdSearchRow{display:flex;gap:7px;background:#fff;padding:5px;border-radius:12px}.ntdSearchRow input{border:0;background:#f3f6fa;min-width:0;flex:1;font-size:16px}.ntdSearchBtn{background:#ff8a20;color:#fff;min-width:80px}.ntdHint{font-size:11px;font-weight:bold;margin:7px 2px 0}.ntdPanel{max-width:760px;margin:0 auto;background:#fff;border:1px solid #d7e2ef;border-radius:14px;padding:12px;box-shadow:0 2px 8px #1020300a}.ntdPanel h3{font-size:14px;margin:3px 0 8px}.ntdGrid{display:grid;grid-template-columns:minmax(0,1fr) 62px minmax(0,1fr);gap:6px;margin-bottom:10px}.ntdCard{border-radius:11px;padding:17px 11px;min-height:84px;display:flex;flex-direction:column;justify-content:center;gap:7px;font-size:14px;overflow-wrap:anywhere}.ntdCard b{font-size:15px}.ntdCard small{font-size:10px}.nsh{background:#dceeff;border:1px solid #c8dff7}.ich,.l2{background:#fff0b8;border:1px solid #f4d76c}.l1{background:#ddf6da;border:1px solid #b6e8ad}.rms1{background:#fce0ec;border:1px solid #f5b6d0}.rms2{background:#ddf6ff;border:1px solid #a6e7fb}.ntdArrow{background:#ff7b22;color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:bold}.ntdOfficeInfo{font-size:12px;color:#294b67;margin-top:10px}.ntdStatus{font-size:12px;margin-top:8px;color:#3b5b77}.ntdStatus.err{color:#a31e1e}.ntdMatches{margin-top:10px}.ntdMatch{padding:9px;border:1px solid #d8e4ef;border-radius:8px;margin-top:6px;cursor:pointer;font-size:12px}.ntdMatch:hover{background:#f3f8fd}.ntdFooter{text-align:center;font-size:10px;color:#7890a8;padding:18px 0 4px;line-height:1.8}
+@media(max-width:460px){.ntdGrid{grid-template-columns:minmax(0,1fr) 48px minmax(0,1fr);gap:4px}.ntdCard{padding:12px 7px;font-size:12px;min-height:78px}.ntdArrow{font-size:10px}.ntdHero{padding:12px}.ntdPanel{margin:0 8px}}
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body><header><div class="brandrow"><div class="brandlogo">INDIA<br>POST</div><div class="brandtext"><h1>Mails Sorting</h1><p>All India RMS • PIN &amp; Hub Mapping</p></div></div></header>
+<div class="tabbar"><button id="tabNtdBtn" class="tabbtn active" onclick="switchTab('ntd')">Mails Sorting</button><button id="tabDeliveryBtn" class="tabbtn" onclick="switchTab('delivery')">Delivery Places</button></div>
+<main id="ntdTab" class="tabPage">
+<section class="ntdHero"><div class="ntdSearchRow"><input id="ntdQuery" placeholder="Enter PIN Code or Office Name (e.g. 574)" onkeydown="if(event.key==='Enter')searchNtd()"><button class="ntdSearchBtn" onclick="searchNtd()">Search</button></div><div class="ntdHint">Enter 3 or more PIN digits (e.g. 574) or an office name.</div></section>
+<section class="ntdPanel"><h3>Speed Post Hub</h3><div class="ntdGrid"><div class="ntdCard nsh"><b>NSH</b><div id="ntdNSH">—</div></div><div class="ntdArrow">NSH<br>→ ICH</div><div class="ntdCard ich"><b>ICH</b><div id="ntdICH">—</div><small>Air Code: <span id="ntdAir1">—</span></small></div></div>
+<h3>Parcel Hub</h3><div class="ntdGrid"><div class="ntdCard l1"><b>L1 PH</b><div id="ntdL1PH">—</div><small>Parcel Air Code: <span id="ntdAir2">—</span></small></div><div class="ntdArrow">L1 PH<br>→ L2 PH</div><div class="ntdCard l2"><b>L2 PH</b><div id="ntdL2PH">—</div><small>Hub: <span id="ntdL2Hub">—</span></small></div></div>
+<h3>Letter Mail</h3><div class="ntdGrid"><div class="ntdCard rms1"><b>RMS L1</b><div id="ntdRMSL1">—</div></div><div class="ntdArrow">L1<br>→ L2</div><div class="ntdCard rms2"><b>RMS L2</b><div id="ntdRMSL2">—</div></div></div>
+<div id="ntdOfficeInfo" class="ntdOfficeInfo"></div><div id="ntdStatus" class="ntdStatus"></div><div id="ntdMatches" class="ntdMatches"></div></section>
+<footer class="ntdFooter">MAILS SORTING • All India PIN &amp; Hub Mapping<br>Data source: Google Sheets</footer>
+</main>
+<main id="deliveryTab" class="tabPage hidden"><section class="panel"><div class="toolbar">
+<button class="primary" onclick="newRecord()">+ ಹೊಸ Delivery Place</button><button class="secondary" onclick="loadAll()">↻ Refresh</button><button id="adminModeBtn" class="secondary" onclick="toggleAdminMode()">Admin Login</button>
+<div class="search"><input id="searchBox" placeholder="Pincode / Office / Place / Beat ಹುಡುಕಿ…" oninput="searchChanged()"></div>
+</div><div id="status" class="status">Office list ಮತ್ತು ದಾಖಲೆಗಳು ಲೋಡ್ ಆಗುತ್ತಿವೆ…</div></section>
+<section id="formPanel" class="panel hidden">
+<h2 id="formTitle" style="font-size:18px;margin-top:0">ಹೊಸ Delivery Place</h2>
+<form id="recordForm" onsubmit="submitForm(event)">
+<div class="formgrid">
+<div class="field"><label for="officeSelect">Office ಆಯ್ಕೆಮಾಡಿ *</label><select id="officeSelect" required onchange="officeChanged()"><option value="">Office ಆಯ್ಕೆಮಾಡಿ…</option></select></div>
+<div class="field"><label for="pincode">Pincode</label><input id="pincode" readonly></div>
+<div class="field"><label for="officeName">Office Name</label><input id="officeName" readonly></div>
+<div class="field"><label for="officeType">Office Type</label><input id="officeType" readonly></div>
+<div class="field"><label for="locatedVillage">Located Village</label><input id="locatedVillage" placeholder="ಗ್ರಾಮದ ಹೆಸರು"></div>
+<div class="field wide"><label for="deliveryPlaces">Delivery Places *</label><input id="deliveryPlaces" required placeholder="Pre University College"><div class="hint">ಒಂದೇ ಹೆಸರನ್ನು ಬೇರೆ Office, Pincode ಅಥವಾ Beat‌ನಲ್ಲಿ ಸೇರಿಸಬಹುದು.</div></div>
+<div class="field"><label for="deliveryBeat">Delivery Beat *</label><input id="deliveryBeat" required placeholder="Beat 1 / NA"></div>
+<div class="field wide"><label for="remarks">Remarks</label><textarea id="remarks" rows="2" placeholder="ಹೆಚ್ಚುವರಿ ಮಾಹಿತಿ"></textarea></div>
 </div>
-<div id="deliveryModal" class="modalback hidden" role="dialog" aria-modal="true" aria-labelledby="deliveryModalTitle">
-  <div class="modal"><div class="modalhead"><h2 id="deliveryModalTitle">Add Delivery Place</h2><button class="light" onclick="closeDeliveryModal()">✕</button></div>
-  <form id="deliveryForm"><div class="modalbody">
-    <input id="deliveryId" type="hidden">
-    <div class="field"><label for="dPin">PIN Code *</label><input id="dPin" required maxlength="10"></div>
-    <div class="field"><label for="dOffice">Office Name *</label><input id="dOffice" required></div>
-    <div class="field span2"><label for="dPlace">Delivery Place *</label><input id="dPlace" required></div>
-    <div class="field"><label for="dBeat">Delivery Beat (optional)</label><input id="dBeat"></div>
-    <div class="field"><label for="dType">Office Type</label><input id="dType" placeholder="BO / SO / HO"></div>
-    <div class="field span2"><label for="dVillage">Located Village</label><input id="dVillage"></div>
-    <div class="field span2"><label for="dRemarks">Remarks</label><textarea id="dRemarks" rows="2"></textarea></div>
-    <div class="span2 muted" id="deliveryFormMessage" style="font-size:12px"></div>
-  </div><div class="modalfoot"><button type="button" class="light" onclick="closeDeliveryModal()">Cancel</button><button type="submit" class="primary" id="saveDeliveryBtn">Save</button></div></form></div>
-</div>
+<div class="toolbar" style="margin-top:15px"><button id="saveBtn" class="primary" type="submit">Save</button><button class="secondary" type="button" onclick="closeForm()">ರದ್ದುಮಾಡಿ</button></div>
+<div id="formStatus" class="status"></div>
+</form></section>
+<section class="panel"><h2 style="font-size:18px;margin:0 0 10px">Delivery Places ಪಟ್ಟಿ</h2><div id="count" class="count">0 ದಾಖಲೆಗಳು</div>
+<div class="tablewrap"><table><thead><tr><th>Pincode</th><th>Office Name</th><th>Office Type</th><th>Located Village</th><th>Delivery Places</th><th>Delivery Beat</th><th>Remarks</th><th>Action</th></tr></thead><tbody id="recordsBody"><tr><td colspan="8">ಲೋಡ್ ಆಗುತ್ತಿದೆ…</td></tr></tbody></table></div></section></main>
 <script>
-/* REQUIRED SETUP: paste your Supabase project's publishable (anon) key below.
-   Never put a service_role/secret key in a browser app. */
+// Supabase configuration: use the project's publishable key only.
 const SUPABASE_URL = "https://ikrgycccphsbluzjwtef.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_7Xqto8X2iejB1VaAPO6hlg_MfcpcysH"; // publishable/anon key only
-let sb = null, currentUser = null, currentRole = "user", searchMode = "pin", lastSearch = "";
-const $ = id => document.getElementById(id);
-const masterFields = [
-  ["pincode","PIN Code"],["office_name","Office Name"],["office_type","Office Type"],["circle","Circle"],
-  ["nsh","NSH"],["ich","ICH"],["air_code1","Air Code 1"],["l1ph","L1 Parcel Hub"],
-  ["l2ph","L2 Parcel Hub"],["air_code2","Air Code 2"],["rms_l1","RMS L1"],["rms_l2","RMS L2"]
-];
-function showMessage(id,text,type=""){const el=$(id);el.textContent=text;el.classList.remove("hidden","error","ok");if(type)el.classList.add(type)}
-function hideMessage(id){$(id).classList.add("hidden")}
-function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-function configured(){return SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.includes("PASTE_YOUR")}
-function initClient(){if(!window.supabase){showMessage("globalMessage","Could not load Supabase client. Check your internet connection.","error");return false}if(!configured()){showMessage("globalMessage","Setup needed: add your Supabase publishable key in the HTML file before using search.","error");return false}sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});return true}
-async function boot(){if(!initClient())return;currentUser={id:null,email:"Public PIN Search"};currentRole="public";$("appView").classList.remove("hidden");await loadStats();$("statOffices").textContent="Search available";showMessage("globalMessage","Public read-only mode: PIN and Office Name search are available. Delivery Places editing remains protected.","")}
-async function signOut(){}
-function setSearchMode(mode){searchMode=mode;const isPin=mode==="pin";$("homeSearchLabel").textContent=isPin?"PIN Code":"Office Name";$("homeSearchInput").placeholder=isPin?"Enter PIN Code":"Enter Office Name";$("searchLabel").textContent=isPin?"PIN Code":"Office Name";$("searchInput").placeholder=isPin?"Enter PIN Code":"Enter Office Name";$("homePinTab").classList.toggle("active",isPin);$("homeOfficeTab").classList.toggle("active",!isPin);$("pinTab").classList.toggle("active",isPin);$("officeTab").classList.toggle("active",!isPin)}
-$("homeSearchForm").addEventListener("submit",e=>{e.preventDefault();runSearch($("homeSearchInput").value,$("homeLimit").value,"homeResults")});
-$("searchForm").addEventListener("submit",e=>{e.preventDefault();runSearch($("searchInput").value,$("searchLimit").value,"searchResults")});
-async function runSearch(value,limit,target){if(!sb)return;const q=value.trim();if(!q){showMessage("globalMessage","Enter a PIN Code or Office Name.","error");return}lastSearch=q;$(target).innerHTML='<div class="panel"><div class="empty">Searching…</div></div>';try{let query=sb.from("ntd_master").select(masterFields.map(f=>f[0]).join(",")).limit(Number(limit));if(searchMode==="pin")query=query.ilike("pincode",q+"%").order("pincode");else query=query.ilike("office_name","%"+q+"%").order("office_name");const {data,error}=await query;if(error)throw error;renderSearchResults(data||[],target)}catch(err){$(target).innerHTML='<div class="notice error">'+esc(err.message||"Search failed")+'</div>'}}
-function renderSearchResults(rows,target){if(!rows.length){$(target).innerHTML='<div class="panel"><div class="empty">No matching records found.</div></div>';return}let html='<section class="panel"><div class="panelhead"><h2>Search Results</h2><span class="tag">'+rows.length+' record(s)</span></div>';rows.forEach((r,i)=>{html+='<div class="panelbody"><div class="resultgrid"><div><table class="detailtable"><tbody>';masterFields.forEach(([k,label])=>{html+='<tr><th>'+esc(label)+'</th><td>'+esc(r[k]||"—")+'</td></tr>'});html+='</tbody></table></div><div><div class="mini-card"><h3>Air Code</h3><div class="inside"><div class="hubvalue">'+esc(r.air_code1||r.air_code2||"—")+'</div><div class="muted">'+esc(r.office_name||"")+'</div></div></div><div class="mini-card orange"><h3>Parcel Hub</h3><div class="inside"><b>'+esc(r.l1ph||"—")+'</b><p class="muted">L1 Parcel Hub</p><b>'+esc(r.l2ph||"—")+'</b><p class="muted">L2 Parcel Hub</p></div></div><div class="mini-card green"><h3>Sorting Hubs</h3><div class="inside"><b>NSH:</b> '+esc(r.nsh||"—")+'<br><b>ICH:</b> '+esc(r.ich||"—")+'<br><b>RMS L1:</b> '+esc(r.rms_l1||"—")+'<br><b>RMS L2:</b> '+esc(r.rms_l2||"—")+'</div></div></div></div></div>';if(i<rows.length-1)html+='<hr style="border:0;border-top:1px solid #e3ebf3;margin:0">'});html+='</section>';$ (target).innerHTML=html}
-$("deliverySearchForm").addEventListener("submit",e=>{e.preventDefault();loadDeliveryPlaces()});
-async function loadDeliveryPlaces(){if(!sb||!currentUser)return;const tbody=$("deliveryRows");tbody.innerHTML='<tr><td colspan="5" class="empty">Loading…</td></tr>';const filter=$("deliveryFilter").value.trim();const limit=Number($("deliveryLimit").value||25);try{let q=sb.from("delivery_places").select("id,pincode,office_name,delivery_places,delivery_beat,office_type,located_village,remarks,created_at,updated_at").order("pincode").limit(limit);if(filter)q=q.or("pincode.ilike.%"+filter+"%,office_name.ilike.%"+filter+"%,delivery_places.ilike.%"+filter+"%");const {data,error}=await q;if(error)throw error;renderDeliveryRows(data||[]);$("deliveryStatus").textContent=(data||[]).length+" record(s) shown"+(filter?" for “"+filter+"”":"")+". RLS permissions apply."}catch(err){tbody.innerHTML='<tr><td colspan="5" class="empty">'+esc(err.message)+'</td></tr>';$("deliveryStatus").textContent="Could not load records."}}
-function renderDeliveryRows(rows){const tbody=$("deliveryRows");if(!rows.length){tbody.innerHTML='<tr><td colspan="5" class="empty">No delivery places found.</td></tr>';return}tbody.innerHTML=rows.map(r=>'<tr><td>'+esc(r.pincode)+'</td><td>'+esc(r.office_name)+'</td><td>'+esc(r.delivery_places)+'</td><td>'+esc(r.delivery_beat||"—")+'</td><td><div class="actions"><button class="light" onclick="editDelivery('+JSON.stringify(r.id)+')">Edit</button>'+(currentRole==="admin"?'<button class="danger" onclick="deleteDelivery('+JSON.stringify(r.id)+')">Delete</button>':'')+'</div></td></tr>').join("");window.deliveryCache=rows}
-function openDeliveryModal(row=null){$("deliveryForm").reset();$("deliveryId").value=row?.id||"";$("deliveryModalTitle").textContent=row?"Edit Delivery Place":"Add Delivery Place";$("dPin").value=row?.pincode||"";$("dOffice").value=row?.office_name||"";$("dPlace").value=row?.delivery_places||"";$("dBeat").value=row?.delivery_beat||"";$("dType").value=row?.office_type||"";$("dVillage").value=row?.located_village||"";$("dRemarks").value=row?.remarks||"";$("deliveryFormMessage").textContent="";$("deliveryModal").classList.remove("hidden")}
-function closeDeliveryModal(){$("deliveryModal").classList.add("hidden")}
-function editDelivery(id){const row=(window.deliveryCache||[]).find(r=>r.id===id);if(row)openDeliveryModal(row)}
-$("deliveryForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const btn=$("saveDeliveryBtn");setBusy(btn,true,"Saving…");const id=$("deliveryId").value;const record={pincode:$("dPin").value.trim(),office_name:$("dOffice").value.trim(),delivery_places:$("dPlace").value.trim(),delivery_beat:$("dBeat").value.trim()||null,office_type:$("dType").value.trim()||null,located_village:$("dVillage").value.trim()||null,remarks:$("dRemarks").value.trim()||null};try{let res=id?await sb.from("delivery_places").update(record).eq("id",id).select("id").single():await sb.from("delivery_places").insert(record).select("id").single();if(res.error)throw res.error;closeDeliveryModal();showMessage("globalMessage",id?"Delivery place updated.":"Delivery place added.","ok");await loadDeliveryPlaces()}catch(err){$("deliveryFormMessage").textContent=err.message||"Save failed";showMessage("globalMessage",err.message||"Save failed.","error")}finally{setBusy(btn,false)}});
-async function deleteDelivery(id){if(currentRole!=="admin"){showMessage("globalMessage","Only an Admin can delete delivery places.","error");return}if(!confirm("Delete this delivery place? This cannot be undone."))return;try{const {error}=await sb.from("delivery_places").delete().eq("id",id);if(error)throw error;showMessage("globalMessage","Delivery place deleted.","ok");await loadDeliveryPlaces()}catch(err){showMessage("globalMessage",err.message||"Delete failed.","error")}}
-document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDeliveryModal()});
-window.addEventListener("load",boot);
-</script>
-</body>
-</html>
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_7Xqto8X2iejB1VaAPO6hlg_MfcpcysH";
+let sb = null, records = [], offices = [], editingId = null, currentRole = 'public', currentUser = null;
+function configured(){ return SUPABASE_PUBLISHABLE_KEY && !SUPABASE_PUBLISHABLE_KEY.includes('PASTE_YOUR'); }
+function initSupabase(){
+  if(!window.supabase){alert('Supabase library load ಆಗಿಲ್ಲ. Internet connection ಪರಿಶೀಲಿಸಿ.');return false;}
+  if(!configured()){alert('HTMLನಲ್ಲಿ ನಿಮ್ಮ Supabase Publishable Key ಸೇರಿಸಿ. Secret/service_role key ಬಳಸಬೇಡಿ.');return false;}
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}); return true;
+}
+function switchTab(which){
+ document.getElementById('ntdTab').classList.toggle('hidden',which!=='ntd');
+ document.getElementById('deliveryTab').classList.toggle('hidden',which!=='delivery');
+ document.getElementById('tabNtdBtn').classList.toggle('active',which==='ntd');
+ document.getElementById('tabDeliveryBtn').classList.toggle('active',which==='delivery');
+ if(which==='delivery') loadDeliveryTab();
+}
+function setNtdText(id,value){document.getElementById(id).textContent=(value==null||String(value).trim()==='')?'—':String(value)}
+function showNtdRecord(r){
+ setNtdText('ntdNSH',r.nsh);setNtdText('ntdICH',r.ich);setNtdText('ntdAir1',r.air_code1);
+ setNtdText('ntdL1PH',r.l1ph);setNtdText('ntdL2PH',r.l2ph);setNtdText('ntdAir2',r.air_code2);
+ setNtdText('ntdL2Hub',r.l2ph);setNtdText('ntdRMSL1',r.rms_l1);setNtdText('ntdRMSL2',r.rms_l2);
+ document.getElementById('ntdOfficeInfo').textContent=[r.pincode,r.office_name,r.office_type,r.circle].filter(Boolean).join(' • ');
+}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function searchNtd(){
+ const q=document.getElementById('ntdQuery').value.trim(), st=document.getElementById('ntdStatus'), matches=document.getElementById('ntdMatches');
+ if(q.length<3){st.textContent='ಕನಿಷ್ಠ 3 ಅಂಕೆಗಳು ಅಥವಾ ಅಕ್ಷರಗಳನ್ನು ನಮೂದಿಸಿ.';st.className='ntdStatus err';return}
+ if(!sb){st.textContent='Supabase ಸಂಪರ್ಕ ಸಿದ್ಧವಾಗಿಲ್ಲ.';st.className='ntdStatus err';return}
+ st.textContent='ಹುಡುಕಲಾಗುತ್ತಿದೆ…';st.className='ntdStatus';matches.innerHTML='';
+ try{
+   let query=sb.from('ntd_master').select('id,pincode,office_name,office_type,circle,nsh,ich,air_code1,l1ph,l2ph,air_code2,rms_l1,rms_l2').limit(50);
+   query=/^\d+$/.test(q)?query.ilike('pincode',q+'%'):query.ilike('office_name','%'+q+'%');
+   const {data,error}=await query;
+   if(error) throw error;
+   const rows=data||[];
+   if(!rows.length){st.textContent='ಹೊಂದಾಣಿಕೆಯ ದಾಖಲೆ ಸಿಗಲಿಲ್ಲ.';st.className='ntdStatus err';['ntdNSH','ntdICH','ntdAir1','ntdL1PH','ntdL2PH','ntdAir2','ntdL2Hub','ntdRMSL1','ntdRMSL2','ntdOfficeInfo'].forEach(id=>setNtdText(id,''));return;}
+   window._ntdRows=rows;showNtdRecord(rows[0]);
+   if(rows.length===1){st.textContent='1 ದಾಖಲೆ ಸಿಕ್ಕಿದೆ.';return;}
+   st.textContent=rows.length+' ಹೊಂದಾಣಿಕೆಗಳು ಸಿಕ್ಕಿವೆ. ಸರಿಯಾದ Office ಆಯ್ಕೆಮಾಡಿ:';
+   matches.innerHTML=rows.map((r,i)=>`<div class="ntdMatch" onclick="chooseNtd(${i})"><b>${esc(r.pincode)} — ${esc(r.office_name)}</b><br>${esc(r.office_type)} • ${esc(r.circle||'')}</div>`).join('');
+ }catch(e){st.textContent='ಹುಡುಕಾಟ ದೋಷ: '+(e.message||'Supabase request failed');st.className='ntdStatus err';}
+}
+function chooseNtd(i){const r=(window._ntdRows||[])[i];if(r)showNtdRecord(r);document.getElementById('ntdStatus').textContent=r?'ಆಯ್ಕೆ: '+r.office_name:'';document.getElementById('ntdMatches').innerHTML='';}
+
+function status(msg,type=''){const e=document.getElementById('status');e.textContent=msg;e.className='status '+type}
+function formStatus(msg,type=''){const e=document.getElementById('formStatus');e.textContent=msg;e.className='status '+type}
+function officeMatchesQuery(o,q){return !q||[o.pincode,o.officeName,o.officeType].some(v=>String(v||'').toLocaleLowerCase().includes(q));}
+function populateOffices(selectedKey=''){
+ const s=document.getElementById('officeSelect'), q=(document.getElementById('searchBox').value||'').trim().toLocaleLowerCase();
+ const matching=offices.map((o,i)=>({o,i})).filter(x=>officeMatchesQuery(x.o,q));
+ s.innerHTML='<option value="">Office ಆಯ್ಕೆಮಾಡಿ… ('+matching.length+' ಹೊಂದಾಣಿಕೆ)</option>'+matching.map(x=>`<option value="${x.i}" ${x.o.officeKey===selectedKey?'selected':''}>${esc(x.o.pincode)} — ${esc(x.o.officeName)} (${esc(x.o.officeType)})</option>`).join('');
+}
+function officeChanged(){const raw=document.getElementById('officeSelect').value,o=raw===''?null:offices[Number(raw)];document.getElementById('pincode').value=o?o.pincode:'';document.getElementById('officeName').value=o?o.officeName:'';document.getElementById('officeType').value=o?o.officeType:'';}
+async function loadDeliveryTab(){
+ if(!sb){status('Supabase ಸಂಪರ್ಕ ಸಿದ್ಧವಾಗಿಲ್ಲ.','err');return;}
+ const {data:{session}}=await sb.auth.getSession(); currentUser=session?.user||null;
+ if(!currentUser){status('Delivery Places ನೋಡಲು Sign In ಅಗತ್ಯ. Mails Sorting Searchಗೆ Login ಬೇಡ.','err');document.getElementById('recordsBody').innerHTML='<tr><td colspan="8">Delivery Places ಖಾಸಗಿ ದಾಖಲೆಗಳು. ನೋಡಲು ಅಥವಾ ಬದಲಾಯಿಸಲು ಕೆಳಗಿನ Sign In ಬಟನ್ ಬಳಸಿ.</td></tr>';document.getElementById('count').textContent='Sign In ಅಗತ್ಯ';
+   let b=document.getElementById('deliverySignInBtn'); if(!b){b=document.createElement('button');b.id='deliverySignInBtn';b.className='primary';b.textContent='Sign In';b.onclick=signInForDelivery;document.querySelector('#deliveryTab .toolbar').prepend(b);} return;}
+ const {data:roleData}=await sb.from('user_roles').select('role').eq('user_id',currentUser.id).maybeSingle();currentRole=roleData?.role||'user';
+ let b=document.getElementById('deliverySignInBtn');if(b)b.remove();
+ await loadAll();
+}
+async function signInForDelivery(){
+ const email=prompt('Delivery Places ಬಳಸಲು ನಿಮ್ಮ email ನಮೂದಿಸಿ:');if(!email)return;const password=prompt('Password ನಮೂದಿಸಿ:');if(!password)return;
+ const {error}=await sb.auth.signInWithPassword({email,password});if(error){status('Sign In ವಿಫಲ: '+error.message,'err');return;}await loadDeliveryTab();
+}
+async function signOutDelivery(){await sb.auth.signOut();currentUser=null;currentRole='public';loadDeliveryTab();}
+async function loadAll(){
+ if(!currentUser){status('Delivery Places ನೋಡಲು Sign In ಅಗತ್ಯ.','err');return;}
+ status('Office list ಮತ್ತು ದಾಖಲೆಗಳು ಲೋಡ್ ಆಗುತ್ತಿವೆ…');
+ try{
+   const {data:od,error:oe}=await sb.from('ntd_master').select('pincode,office_name,office_type').order('office_name').limit(20000);if(oe)throw oe;
+   offices=(od||[]).map((o,i)=>({...o,officeName:o.office_name,officeType:o.office_type,officeKey:String(i)}));populateOffices();
+   const {data:rd,error:re}=await sb.from('delivery_places').select('*').order('office_name').limit(5000);if(re)throw re;
+   records=(rd||[]).map(r=>({...r,officeName:r.office_name,officeType:r.office_type,locatedVillage:r.located_village,deliveryPlaces:r.delivery_places,deliveryBeat:r.delivery_beat,remarks:r.remarks}));renderRecords();status('Officeಗಳು: '+offices.length+' | Delivery Place ದಾಖಲೆಗಳು: '+records.length,'ok');
+ }catch(e){status('ಡೇಟಾ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+e.message,'err');}
+}
+function searchChanged(){renderRecords();const open=!document.getElementById('formPanel').classList.contains('hidden');if(open){const cur=document.getElementById('officeSelect').value;const o=cur===''?null:offices[Number(cur)];populateOffices(o?o.officeKey:'');}}
+function renderRecords(){const q=(document.getElementById('searchBox').value||'').trim().toLocaleLowerCase(),b=document.getElementById('recordsBody');if(!q){document.getElementById('count').textContent='ಹುಡುಕಲು Pincode / Office / Place / Beat ನಮೂದಿಸಿ';b.innerHTML='<tr><td colspan="8">ದಾಖಲೆಗಳನ್ನು ನೋಡಲು ಮೇಲಿನ Search ಬಾಕ್ಸ್‌ನಲ್ಲಿ ಹುಡುಕಿ.</td></tr>';return;}const list=records.filter(r=>[r.pincode,r.officeName,r.officeType,r.locatedVillage,r.deliveryPlaces,r.deliveryBeat,r.remarks].some(v=>String(v||'').toLocaleLowerCase().includes(q)));document.getElementById('count').textContent=list.length+' ದಾಖಲೆಗಳು';if(!list.length){b.innerHTML='<tr><td colspan="8">ಹೊಂದಾಣಿಕೆಯ ದಾಖಲೆ ಇಲ್ಲ.</td></tr>';return;}b.innerHTML=list.map(r=>`<tr><td>${esc(r.pincode)}</td><td>${esc(r.officeName)}</td><td>${esc(r.officeType)}</td><td>${esc(r.locatedVillage)}</td><td>${esc(r.deliveryPlaces)}</td><td>${esc(r.deliveryBeat)}</td><td>${esc(r.remarks)}</td><td><div class="actions"><button class="secondary" onclick="editRecord('${esc(r.id)}')">Edit</button>${currentRole==='admin'?`<button class="danger" onclick="removeRecord('${esc(r.id)}')">Delete</button>`:''}</div></td></tr>`).join('');}
+function newRecord(){if(!currentUser){signInForDelivery();return;}editingId=null;document.getElementById('recordForm').reset();populateOffices();officeChanged();document.getElementById('formTitle').textContent='ಹೊಸ Delivery Place ಸೇರಿಸಿ';document.getElementById('saveBtn').textContent='Save';formStatus('');document.getElementById('formPanel').classList.remove('hidden');}
+function editRecord(id){if(!currentUser){signInForDelivery();return;}const r=records.find(x=>x.id===id);if(!r)return;editingId=r.id;const o=offices.find(x=>x.pincode===r.pincode&&x.officeName===r.officeName&&x.officeType===r.officeType);populateOffices(o?o.officeKey:'');document.getElementById('officeSelect').value=o?String(offices.indexOf(o)):'';officeChanged();document.getElementById('locatedVillage').value=r.locatedVillage||'';document.getElementById('deliveryPlaces').value=r.deliveryPlaces||'';document.getElementById('deliveryBeat').value=r.deliveryBeat||'';document.getElementById('remarks').value=r.remarks||'';document.getElementById('formTitle').textContent='Delivery Place ತಿದ್ದುಪಡಿ';document.getElementById('saveBtn').textContent='Update';formStatus('');document.getElementById('formPanel').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});}
+function closeForm(){document.getElementById('formPanel').classList.add('hidden');editingId=null;}
+async function submitForm(e){e.preventDefault();if(!currentUser){formStatus('ಮೊದಲು Sign In ಮಾಡಿ.','err');return;}const selected=document.getElementById('officeSelect').value,o=selected===''?null:offices[Number(selected)];if(!o){formStatus('ಮೊದಲು Office ಆಯ್ಕೆಮಾಡಿ.','err');return;}const d={pincode:o.pincode,office_name:o.officeName,office_type:o.officeType,located_village:document.getElementById('locatedVillage').value.trim()||null,delivery_places:document.getElementById('deliveryPlaces').value.trim(),delivery_beat:document.getElementById('deliveryBeat').value.trim()||null,remarks:document.getElementById('remarks').value.trim()||null};const btn=document.getElementById('saveBtn');btn.disabled=true;try{let result;if(editingId)result=await sb.from('delivery_places').update(d).eq('id',editingId);else result=await sb.from('delivery_places').insert(d);if(result.error)throw result.error;closeForm();await loadAll();status('Delivery Place ಉಳಿಸಲಾಗಿದೆ.','ok');}catch(err){formStatus('ಉಳಿಸಲಾಗಲಿಲ್ಲ: '+err.message,'err');}finally{btn.disabled=false;btn.textContent=editingId?'Update':'Save';}}
+async function removeRecord(id){if(currentRole!=='admin'){status('Delete ಮಾಡಲು Admin ಅನುಮತಿ ಅಗತ್ಯ.','err');return;}const r=records.find(x=>x.id===id);if(!r||!confirm('ಈ Delivery Place ಅಳಿಸಬೇಕೇ?\n'+r.deliveryPlaces+' — '+r.officeName))return;const {error}=await sb.from('delivery_places').delete().eq('id',id);if(error){status('ಅಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+error.message,'err');return;}await loadAll();status('ದಾಖಲೆ ಅಳಿಸಲಾಗಿದೆ.','ok');}
+if(initSupabase()){
+ // App opens directly in public PIN/Office search mode. Login is only requested when Delivery Places is opened.
+ document.getElementById('ntdStatus').textContent='PIN Code ಅಥವಾ Office Name ನಮೂದಿಸಿ ಹುಡುಕಿ.';
+}
+</script></body></html>
