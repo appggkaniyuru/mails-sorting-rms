@@ -73,16 +73,16 @@ class MainActivity : Activity() {
     }
 
     private fun loadApp() {
-        errorText.visibility = View.GONE
-        webView.visibility = View.VISIBLE
-        progress.visibility = View.VISIBLE
-        webView.loadUrl("https://appggkaniyuru.github.io/mails-sorting-rms/")
+    errorText.visibility = View.GONE
+    webView.visibility = View.VISIBLE
+    progress.visibility = View.VISIBLE
+    webView.loadUrl("https://appggkaniyuru.github.io/mails-sorting-rms/")
+}
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (::webView.isInitialized && webView.canGoBack()) webView.goBack() else super.onBackPressed()
-    }
-
+@Deprecated("Deprecated in Java")
+override fun onBackPressed() {
+    if (::webView.isInitialized && webView.canGoBack()) webView.goBack() else super.onBackPressed()
+}
     override fun onDestroy() {
         if (::webView.isInitialized) webView.destroy()
         super.onDestroy()
