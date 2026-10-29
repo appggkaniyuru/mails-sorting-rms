@@ -862,7 +862,27 @@ const TD_OFFICE_ALLOWLIST = new Set([
   "576283|kenchanur b.o",
   "576283|kodladi b.o"
 ]);
-function tdOfficeKey(pin,name){return String(pin||'').trim()+'|'+String(name||'').trim().toLocaleLowerCase().replace(/\s+/g,' ');}
+function normalizeOfficeName(name){
+ return String(name||'').toLocaleLowerCase()
+   .replace(/\b(sub office|branch office|head office)\b/g,'')
+   .replace(/[^a-z0-9]/g,'');
+}
+function tdOfficeKey(pin,name){return String(pin||'').trim()+'|'+normalizeOfficeName(name);}
+function officeTypeFromName(name){
+ const n=String(name||'').toLocaleLowerCase().trim();
+ if(/(?:^|\s)h\.o\.?$/.test(n)) return 'Head Office';
+ if(/(?:^|\s)s\.o\.?$/.test(n)) return 'Sub Office';
+ if(/(?:^|\s)b\.o\.?$/.test(n)) return 'Branch Office';
+ return '';
+}
+function titleOfficeName(name){
+ return String(name||'').trim().split(/\s+/).map(w=>{
+   if(/^s\.o\.?$/i.test(w)) return 'S.O';
+   if(/^b\.o\.?$/i.test(w)) return 'B.O';
+   if(/^h\.o\.?$/i.test(w)) return 'H.O';
+   return w.charAt(0).toLocaleUpperCase()+w.slice(1);
+ }).join(' ');
+}
 function configured(){ return SUPABASE_PUBLISHABLE_KEY && !SUPABASE_PUBLISHABLE_KEY.includes('PASTE_YOUR'); }
 function initSupabase(){
   if(!window.supabase){alert('Supabase library load ಆಗಿಲ್ಲ. Internet connection ಪರಿಶೀಲಿಸಿ.');return false;}
@@ -890,7 +910,7 @@ async function searchNtd(){
  if(!sb){st.textContent='Supabase ಸಂಪರ್ಕ ಸಿದ್ಧವಾಗಿಲ್ಲ.';st.className='ntdStatus err';return}
  st.textContent='ಹುಡುಕಲಾಗುತ್ತಿದೆ…';st.className='ntdStatus';matches.innerHTML='';
  try{
-   let query=sb.from('ntd_master').select('id,pincode,office_name,office_type,circle,nsh,ich,air_code1,l1ph,l2ph,air_code2,rms_l1,rms_l2').limit(50);
+   let query=sb.from('ntd_master').select('id,pincode,office_name,office_type,circle,nsh,ich,air_code1,l1ph,l2ph,air_code2,rms_l1,rms_l2').limit(1000);
    query=/^\d+$/.test(q)?query.ilike('pincode',q+'%'):query.ilike('office_name','%'+q+'%');
    const {data,error}=await query;
    if(error) throw error;
@@ -949,9 +969,20 @@ async function loadAll(){
      officeRows.push(...(page||[]));
      if(!page||page.length<pageSize)break;
    }
-   offices=officeRows
-     .filter(o=>TD_OFFICE_ALLOWLIST.has(tdOfficeKey(o.pincode,o.office_name)))
-     .map((o,i)=>({...o,officeName:o.office_name,officeType:o.office_type,officeKey:String(i)}));
+   // Build the TD dropdown from the supplied allowlist so name-format differences
+   // in ntd_master cannot silently remove valid TD offices.
+   const masterByKey=new Map();
+   officeRows.forEach(o=>masterByKey.set(tdOfficeKey(o.pincode,o.office_name),o));
+   offices=Array.from(TD_OFFICE_ALLOWLIST).map((entry,i)=>{
+     const parts=entry.split('|');
+     const pin=String(parts[0]||'').trim();
+     const listedName=String(parts.slice(1).join('|')||'').trim();
+     const master=masterByKey.get(tdOfficeKey(pin,listedName));
+     const officeName=master?.office_name||titleOfficeName(listedName);
+     const officeType=master?.office_type||officeTypeFromName(listedName)||'Branch Office';
+     return {pincode:pin,office_name:officeName,office_type:officeType,
+       officeName,officeType,officeKey:String(i)};
+   });
    populateOffices();
    const {data:rd,error:re}=await sb.from('delivery_places').select('*').order('office_name').limit(5000);if(re)throw re;
    records=(rd||[]).map(r=>({...r,officeName:r.office_name,officeType:r.office_type,locatedVillage:r.located_village,deliveryPlaces:r.delivery_places,deliveryBeat:r.delivery_beat,remarks:r.remarks}));renderRecords();status('Offices: '+offices.length+' | Delivery records: '+records.length+(currentUser?' | Google Login: '+(currentUser.email||'Signed in'):' | Public view; Add is available'),'ok');
@@ -968,7 +999,7 @@ function newRecord(){
 function editRecord(id){
  if(!currentUser){localStorage.setItem('deliveryEditAfterGoogleLogin',id);status('Edit ಮಾಡಲು Google Login ಅಗತ್ಯ. Google Login ತೆರೆಯಲಾಗುತ್ತಿದೆ…','');signInForDelivery();return;}
  const r=records.find(x=>x.id===id);if(!r)return;editingId=r.id;
- const o=offices.find(x=>x.pincode===r.pincode&&x.officeName===r.officeName&&x.officeType===r.officeType);
+ const o=offices.find(x=>String(x.pincode)===String(r.pincode)&&normalizeOfficeName(x.officeName)===normalizeOfficeName(r.officeName));
  populateOffices(o?o.officeKey:'');document.getElementById('officeSelect').value=o?String(offices.indexOf(o)):'';
  officeChanged();document.getElementById('locatedVillage').value=r.locatedVillage||'';
  document.getElementById('deliveryPlaces').value=r.deliveryPlaces||'';document.getElementById('deliveryBeat').value=r.deliveryBeat||'';
