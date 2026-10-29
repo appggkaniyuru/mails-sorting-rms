@@ -153,21 +153,83 @@ function editRecord(id){
 }
 function closeForm(){document.getElementById('formPanel').classList.add('hidden');editingId=null;}
 async function submitForm(e){
- e.preventDefault();
- if(editingId&&!currentUser){formStatus('Edit ಮಾಡಲು Google Login ಅಗತ್ಯ.','err');return;}
- const selected=document.getElementById('officeSelect').value,o=selected===''?null:offices[Number(selected)];
- if(!o){formStatus('ಮೊದಲು Office ಆಯ್ಕೆಮಾಡಿ.','err');return;}
- const place=document.getElementById('deliveryPlaces').value.trim(),pin=String(o.pincode||'').trim();
- if(!/^\\d{6}$/.test(pin)){formStatus('ಆಯ್ಕೆ ಮಾಡಿದ Office‌ನ Pincode 6 ಅಂಕೆಗಳಾಗಿರಬೇಕು.','err');return;}
- if(!place||place.length>200){formStatus('Delivery Places ಖಾಲಿ ಇರಬಾರದು; ಗರಿಷ್ಠ 200 ಅಕ್ಷರಗಳು.','err');return;}
- const beat=document.getElementById('deliveryBeat').value.trim(),village=document.getElementById('locatedVillage').value.trim(),remarks=document.getElementById('remarks').value.trim();
- if(beat.length>100||village.length>150||remarks.length>500){formStatus('Beat ಗರಿಷ್ಠ 100, Village 150, Remarks 500 ಅಕ್ಷರಗಳು ಮಾತ್ರ.','err');return;}
- const d={pincode:pin,office_name:String(o.officeName||'').trim(),office_type:String(o.officeType||'').trim()||null,located_village:village||null,delivery_places:place,delivery_beat:beat||null,remarks:remarks||null};
- const btn=document.getElementById('saveBtn');btn.disabled=true;const wasEditing=Boolean(editingId);
- try{let result;if(wasEditing)result=await sb.from('delivery_places').update(d).eq('id',editingId);else result=await sb.from('delivery_places').insert(d);
- if(result.error)throw result.error;closeForm();await loadAll();status(wasEditing?'Delivery Place ತಿದ್ದುಪಡಿ ಉಳಿಸಲಾಗಿದೆ.':'ಹೊಸ Delivery Place ಸೇರಿಸಲಾಗಿದೆ.','ok');
- }catch(err){formStatus('ಉಳಿಸಲಾಗಲಿಲ್ಲ: '+err.message,'err');}
- finally{btn.disabled=false;btn.textContent=editingId?'Update':'Save';}
+  e.preventDefault();
+  const wasEditing = Boolean(editingId);
+
+  // New records are public; only editing an existing record requires Google Login.
+  if (wasEditing && !currentUser) {
+    formStatus('ಈ ದಾಖಲೆಯನ್ನು ತಿದ್ದುಪಡಿ ಮಾಡಲು Google Login ಅಗತ್ಯ.','err');
+    return;
+  }
+
+  const selected = document.getElementById('officeSelect').value;
+  const o = selected === '' ? null : offices[Number(selected)];
+  if (!o) {
+    formStatus('ಮೊದಲು Office ಆಯ್ಕೆಮಾಡಿ.','err');
+    return;
+  }
+
+  const pin = String(o.pincode || '').trim();
+  if (!/^\d{6}$/.test(pin)) {
+    formStatus('ಆಯ್ಕೆ ಮಾಡಿದ Office‌ನ Pincode 6 ಅಂಕೆಗಳಾಗಿರಬೇಕು.','err');
+    return;
+  }
+
+  const place = document.getElementById('deliveryPlaces').value.trim();
+  const beat = document.getElementById('deliveryBeat').value.trim();
+  const village = document.getElementById('locatedVillage').value.trim();
+  const remarks = document.getElementById('remarks').value.trim();
+
+  if (!place || place.length > 200) {
+    formStatus('Delivery Places ಖಾಲಿ ಇರಬಾರದು; ಗರಿಷ್ಠ 200 ಅಕ್ಷರಗಳು.','err');
+    return;
+  }
+  if (beat.length > 100 || village.length > 150 || remarks.length > 500) {
+    formStatus('Beat ಗರಿಷ್ಠ 100, Village 150, Remarks 500 ಅಕ್ಷರಗಳು ಮಾತ್ರ.','err');
+    return;
+  }
+
+  const d = {
+    pincode: pin,
+    office_name: String(o.officeName || '').trim(),
+    office_type: String(o.officeType || '').trim() || null,
+    located_village: village || null,
+    delivery_places: place,
+    delivery_beat: beat || null,
+    remarks: remarks || null
+  };
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  const oldButtonText = btn.textContent;
+  btn.textContent = wasEditing ? 'Update ಆಗುತ್ತಿದೆ…' : 'Save ಆಗುತ್ತಿದೆ…';
+
+  try {
+    let result;
+    if (wasEditing) {
+      result = await sb.from('delivery_places').update(d).eq('id', editingId);
+    } else {
+      // Public Add: no Google Login check here.
+      result = await sb.from('delivery_places').insert(d);
+    }
+
+    if (result.error) throw result.error;
+
+    closeForm();
+    await loadAll();
+    status(
+      wasEditing ? 'Delivery Place ತಿದ್ದುಪಡಿ ಉಳಿಸಲಾಗಿದೆ.' : 'ಹೊಸ Delivery Place ಸೇರಿಸಲಾಗಿದೆ.',
+      'ok'
+    );
+  } catch (err) {
+    formStatus('ಉಳಿಸಲಾಗಲಿಲ್ಲ: ' + (err.message || 'Unknown error'), 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editingId ? 'Update' : 'Save';
+    if (document.getElementById('formPanel').classList.contains('hidden')) {
+      btn.textContent = oldButtonText === 'Update' ? 'Update' : 'Save';
+    }
+  }
 }
 async function removeRecord(id){if(currentRole!=='admin'){status('Delete ಮಾಡಲು Admin ಅನುಮತಿ ಅಗತ್ಯ.','err');return;}const r=records.find(x=>x.id===id);if(!r||!confirm('ಈ Delivery Place ಅಳಿಸಬೇಕೇ?\n'+r.deliveryPlaces+' — '+r.officeName))return;const {error}=await sb.from('delivery_places').delete().eq('id',id);if(error){status('ಅಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+error.message,'err');return;}await loadAll();status('ದಾಖಲೆ ಅಳಿಸಲಾಗಿದೆ.','ok');}
 if(initSupabase()){
