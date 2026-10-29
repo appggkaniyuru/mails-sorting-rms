@@ -26,7 +26,7 @@ table{border-collapse:collapse;width:100%;min-width:950px;background:white}th,td
 <footer class="ntdFooter">MAILS SORTING • All India PIN &amp; Hub Mapping<br>Data source: Google Sheets</footer>
 </main>
 <main id="deliveryTab" class="tabPage hidden"><section class="panel"><div class="toolbar">
-<button class="primary" onclick="newRecord()">+ ಹೊಸ Delivery Place</button><button class="secondary" onclick="loadAll()">↻ Refresh</button><button id="adminModeBtn" class="secondary" onclick="toggleAdminMode()">Admin Login</button>
+<button class="primary" onclick="newRecord()">+ ಹೊಸ Delivery Place</button><button class="secondary" onclick="loadAll()">↻ Refresh</button><button id="adminModeBtn" class="secondary" onclick="toggleAdminMode()">Google Login for Edit</button>
 <div class="search"><input id="searchBox" placeholder="Search PIN Code / Office / Village / Beat…" oninput="searchChanged()"></div>
 </div><div id="status" class="status">Loading Delivery Village records…</div></section>
 <section id="formPanel" class="panel hidden">
@@ -111,10 +111,18 @@ async function loadDeliveryTab(){
  await loadAll();
 }
 async function signInForDelivery(){
- const email=prompt('Delivery Places ಬಳಸಲು ನಿಮ್ಮ email ನಮೂದಿಸಿ:');if(!email)return;const password=prompt('Password ನಮೂದಿಸಿ:');if(!password)return;
- const {error}=await sb.auth.signInWithPassword({email,password});if(error){status('Sign In ವಿಫಲ: '+error.message,'err');return;}await loadDeliveryTab();
+ if(!sb){status('Supabase ಸಂಪರ್ಕ ಸಿದ್ಧವಾಗಿಲ್ಲ.','err');return;}
+ const {error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+window.location.pathname}});
+ if(error)status('Google Login ಆರಂಭಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+error.message,'err');
 }
-async function signOutDelivery(){await sb.auth.signOut();currentUser=null;currentRole='public';loadDeliveryTab();}
+async function toggleAdminMode(){if(currentUser){await signOutDelivery();}else{await signInForDelivery();}}
+async function signOutDelivery(){
+ const {error}=await sb.auth.signOut();
+ if(error){status('Sign Out ವಿಫಲ: '+error.message,'err');return;}
+ currentUser=null;currentRole='public';
+ document.getElementById('adminModeBtn').textContent='Google Login for Edit';
+ await loadDeliveryTab();
+}
 async function loadAll(){
  if(!sb){status('Supabase connection is not ready.','err');return;}
  status('Loading office list and delivery records…');
@@ -122,18 +130,58 @@ async function loadAll(){
    const {data:od,error:oe}=await sb.from('ntd_master').select('pincode,office_name,office_type').order('office_name').limit(20000);if(oe)throw oe;
    offices=(od||[]).map((o,i)=>({...o,officeName:o.office_name,officeType:o.office_type,officeKey:String(i)}));populateOffices();
    const {data:rd,error:re}=await sb.from('delivery_places').select('*').order('office_name').limit(5000);if(re)throw re;
-   records=(rd||[]).map(r=>({...r,officeName:r.office_name,officeType:r.office_type,locatedVillage:r.located_village,deliveryPlaces:r.delivery_places,deliveryBeat:r.delivery_beat,remarks:r.remarks}));renderRecords();status('Offices: '+offices.length+' | Delivery records: '+records.length+(currentUser?' | Signed in':' | Public read-only view'),'ok');
+   records=(rd||[]).map(r=>({...r,officeName:r.office_name,officeType:r.office_type,locatedVillage:r.located_village,deliveryPlaces:r.delivery_places,deliveryBeat:r.delivery_beat,remarks:r.remarks}));renderRecords();status('Offices: '+offices.length+' | Delivery records: '+records.length+(currentUser?' | Google Login: '+(currentUser.email||'Signed in'):' | Public view; Add is available'),'ok');
+    document.getElementById('adminModeBtn').textContent=currentUser?'Sign Out ('+(currentUser.email||'Google User')+')':'Google Login for Edit';
  }catch(e){status('ಡೇಟಾ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+e.message,'err');}
 }
 function searchChanged(){renderRecords();const open=!document.getElementById('formPanel').classList.contains('hidden');if(open){const cur=document.getElementById('officeSelect').value;const o=cur===''?null:offices[Number(cur)];populateOffices(o?o.officeKey:'');}}
 function renderRecords(){const q=(document.getElementById('searchBox').value||'').trim().toLocaleLowerCase(),b=document.getElementById('recordsBody');if(!q){document.getElementById('count').textContent='ಹುಡುಕಲು Pincode / Office / Place / Beat ನಮೂದಿಸಿ';b.innerHTML='<tr><td colspan="8">Enter a PIN Code, Office, Village or Beat in the search box above.</td></tr>';return;}const list=records.filter(r=>[r.pincode,r.officeName,r.officeType,r.locatedVillage,r.deliveryPlaces,r.deliveryBeat,r.remarks].some(v=>String(v||'').toLocaleLowerCase().includes(q)));document.getElementById('count').textContent=list.length+' ದಾಖಲೆಗಳು';if(!list.length){b.innerHTML='<tr><td colspan="8">No matching records found.</td></tr>';return;}b.innerHTML=list.map(r=>`<tr><td>${esc(r.pincode)}</td><td>${esc(r.officeName)}</td><td>${esc(r.officeType)}</td><td>${esc(r.locatedVillage)}</td><td>${esc(r.deliveryPlaces)}</td><td>${esc(r.deliveryBeat)}</td><td>${esc(r.remarks)}</td><td><div class="actions"><button class="secondary" onclick="editRecord('${esc(r.id)}')">Edit</button>${currentRole==='admin'?`<button class="danger" onclick="removeRecord('${esc(r.id)}')">Delete</button>`:''}</div></td></tr>`).join('');}
-function newRecord(){if(!currentUser){status('To add or edit records, use Admin Login first. Viewing and searching do not require login.','err');signInForDelivery();return;}editingId=null;document.getElementById('recordForm').reset();populateOffices();officeChanged();document.getElementById('formTitle').textContent='ಹೊಸ Delivery Place ಸೇರಿಸಿ';document.getElementById('saveBtn').textContent='Save';formStatus('');document.getElementById('formPanel').classList.remove('hidden');}
-function editRecord(id){if(!currentUser){status('To add or edit records, use Admin Login first. Viewing and searching do not require login.','err');signInForDelivery();return;}const r=records.find(x=>x.id===id);if(!r)return;editingId=r.id;const o=offices.find(x=>x.pincode===r.pincode&&x.officeName===r.officeName&&x.officeType===r.officeType);populateOffices(o?o.officeKey:'');document.getElementById('officeSelect').value=o?String(offices.indexOf(o)):'';officeChanged();document.getElementById('locatedVillage').value=r.locatedVillage||'';document.getElementById('deliveryPlaces').value=r.deliveryPlaces||'';document.getElementById('deliveryBeat').value=r.deliveryBeat||'';document.getElementById('remarks').value=r.remarks||'';document.getElementById('formTitle').textContent='Delivery Place ತಿದ್ದುಪಡಿ';document.getElementById('saveBtn').textContent='Update';formStatus('');document.getElementById('formPanel').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});}
+function newRecord(){
+ editingId=null;document.getElementById('recordForm').reset();populateOffices();officeChanged();
+ document.getElementById('formTitle').textContent='ಹೊಸ Delivery Place ಸೇರಿಸಿ';document.getElementById('saveBtn').textContent='Save';
+ formStatus('Login ಇಲ್ಲದೆ ಹೊಸ Delivery Place ಸೇರಿಸಬಹುದು.','');document.getElementById('formPanel').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});
+}
+function editRecord(id){
+ if(!currentUser){localStorage.setItem('deliveryEditAfterGoogleLogin',id);status('Edit ಮಾಡಲು Google Login ಅಗತ್ಯ. Google Login ತೆರೆಯಲಾಗುತ್ತಿದೆ…','');signInForDelivery();return;}
+ const r=records.find(x=>x.id===id);if(!r)return;editingId=r.id;
+ const o=offices.find(x=>x.pincode===r.pincode&&x.officeName===r.officeName&&x.officeType===r.officeType);
+ populateOffices(o?o.officeKey:'');document.getElementById('officeSelect').value=o?String(offices.indexOf(o)):'';
+ officeChanged();document.getElementById('locatedVillage').value=r.locatedVillage||'';
+ document.getElementById('deliveryPlaces').value=r.deliveryPlaces||'';document.getElementById('deliveryBeat').value=r.deliveryBeat||'';
+ document.getElementById('remarks').value=r.remarks||'';document.getElementById('formTitle').textContent='Delivery Place ತಿದ್ದುಪಡಿ';
+ document.getElementById('saveBtn').textContent='Update';formStatus('');document.getElementById('formPanel').classList.remove('hidden');window.scrollTo({top:0,behavior:'smooth'});
+}
 function closeForm(){document.getElementById('formPanel').classList.add('hidden');editingId=null;}
-async function submitForm(e){e.preventDefault();if(!currentUser){formStatus('Please sign in before saving changes.','err');return;}const selected=document.getElementById('officeSelect').value,o=selected===''?null:offices[Number(selected)];if(!o){formStatus('ಮೊದಲು Office ಆಯ್ಕೆಮಾಡಿ.','err');return;}const d={pincode:o.pincode,office_name:o.officeName,office_type:o.officeType,located_village:document.getElementById('locatedVillage').value.trim()||null,delivery_places:document.getElementById('deliveryPlaces').value.trim(),delivery_beat:document.getElementById('deliveryBeat').value.trim()||null,remarks:document.getElementById('remarks').value.trim()||null};const btn=document.getElementById('saveBtn');btn.disabled=true;try{let result;if(editingId)result=await sb.from('delivery_places').update(d).eq('id',editingId);else result=await sb.from('delivery_places').insert(d);if(result.error)throw result.error;closeForm();await loadAll();status('Delivery Place ಉಳಿಸಲಾಗಿದೆ.','ok');}catch(err){formStatus('ಉಳಿಸಲಾಗಲಿಲ್ಲ: '+err.message,'err');}finally{btn.disabled=false;btn.textContent=editingId?'Update':'Save';}}
+async function submitForm(e){
+ e.preventDefault();
+ if(editingId&&!currentUser){formStatus('Edit ಮಾಡಲು Google Login ಅಗತ್ಯ.','err');return;}
+ const selected=document.getElementById('officeSelect').value,o=selected===''?null:offices[Number(selected)];
+ if(!o){formStatus('ಮೊದಲು Office ಆಯ್ಕೆಮಾಡಿ.','err');return;}
+ const place=document.getElementById('deliveryPlaces').value.trim(),pin=String(o.pincode||'').trim();
+ if(!/^\\d{6}$/.test(pin)){formStatus('ಆಯ್ಕೆ ಮಾಡಿದ Office‌ನ Pincode 6 ಅಂಕೆಗಳಾಗಿರಬೇಕು.','err');return;}
+ if(!place||place.length>200){formStatus('Delivery Places ಖಾಲಿ ಇರಬಾರದು; ಗರಿಷ್ಠ 200 ಅಕ್ಷರಗಳು.','err');return;}
+ const beat=document.getElementById('deliveryBeat').value.trim(),village=document.getElementById('locatedVillage').value.trim(),remarks=document.getElementById('remarks').value.trim();
+ if(beat.length>100||village.length>150||remarks.length>500){formStatus('Beat ಗರಿಷ್ಠ 100, Village 150, Remarks 500 ಅಕ್ಷರಗಳು ಮಾತ್ರ.','err');return;}
+ const d={pincode:pin,office_name:String(o.officeName||'').trim(),office_type:String(o.officeType||'').trim()||null,located_village:village||null,delivery_places:place,delivery_beat:beat||null,remarks:remarks||null};
+ const btn=document.getElementById('saveBtn');btn.disabled=true;const wasEditing=Boolean(editingId);
+ try{let result;if(wasEditing)result=await sb.from('delivery_places').update(d).eq('id',editingId);else result=await sb.from('delivery_places').insert(d);
+ if(result.error)throw result.error;closeForm();await loadAll();status(wasEditing?'Delivery Place ತಿದ್ದುಪಡಿ ಉಳಿಸಲಾಗಿದೆ.':'ಹೊಸ Delivery Place ಸೇರಿಸಲಾಗಿದೆ.','ok');
+ }catch(err){formStatus('ಉಳಿಸಲಾಗಲಿಲ್ಲ: '+err.message,'err');}
+ finally{btn.disabled=false;btn.textContent=editingId?'Update':'Save';}
+}
 async function removeRecord(id){if(currentRole!=='admin'){status('Delete ಮಾಡಲು Admin ಅನುಮತಿ ಅಗತ್ಯ.','err');return;}const r=records.find(x=>x.id===id);if(!r||!confirm('ಈ Delivery Place ಅಳಿಸಬೇಕೇ?\n'+r.deliveryPlaces+' — '+r.officeName))return;const {error}=await sb.from('delivery_places').delete().eq('id',id);if(error){status('ಅಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+error.message,'err');return;}await loadAll();status('ದಾಖಲೆ ಅಳಿಸಲಾಗಿದೆ.','ok');}
 if(initSupabase()){
- // App opens directly in public PIN/Office search mode. Login is only requested when Delivery Places is opened.
  document.getElementById('ntdStatus').textContent='PIN Code ಅಥವಾ Office Name ನಮೂದಿಸಿ ಹುಡುಕಿ.';
+ sb.auth.onAuthStateChange((event,session)=>{
+   currentUser=session?.user||null;currentRole=currentUser?'user':'public';
+   if(!document.getElementById('deliveryTab').classList.contains('hidden'))setTimeout(()=>loadDeliveryTab(),0);
+ });
+ window.addEventListener('load',async()=>{
+   const {data:{session}}=await sb.auth.getSession();currentUser=session?.user||null;
+   if(currentUser){
+     const pendingId=localStorage.getItem('deliveryEditAfterGoogleLogin');
+     if(pendingId){localStorage.removeItem('deliveryEditAfterGoogleLogin');switchTab('delivery');await loadDeliveryTab();editRecord(pendingId);}
+   }
+ });
 }
 </script></body></html>
