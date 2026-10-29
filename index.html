@@ -910,7 +910,7 @@ function officeMatchesQuery(o,q){return !q||[o.pincode,o.officeName,o.officeType
 function populateOffices(selectedKey=''){
  const s=document.getElementById('officeSelect'), q=(document.getElementById('searchBox').value||'').trim().toLocaleLowerCase();
  const matching=offices.map((o,i)=>({o,i})).filter(x=>officeMatchesQuery(x.o,q));
- s.innerHTML='<option value="">Office ಆಯ್ಕೆಮಾಡಿ… ('+matching.length+' ಹೊಂದಾಣಿಕೆ)</option>'+matching.map(x=>`<option value="${x.i}" ${x.o.officeKey===selectedKey?'selected':''}>${esc(x.o.pincode)} — ${esc(x.o.officeName)} (${esc(x.o.officeType)})</option>`).join('');
+ s.innerHTML='<option value="">'+(matching.length?'Office ಆಯ್ಕೆಮಾಡಿ… ('+matching.length+' ಹೊಂದಾಣಿಕೆ)':'ಈ Pincode/ಹುಡುಕಾಟಕ್ಕೆ Office ಸಿಗಲಿಲ್ಲ')+'</option>'+matching.map(x=>`<option value="${x.i}" ${x.o.officeKey===selectedKey?'selected':''}>${esc(x.o.pincode)} — ${esc(x.o.officeName)} (${esc(x.o.officeType)})</option>`).join('');
 }
 function officeChanged(){const raw=document.getElementById('officeSelect').value,o=raw===''?null:offices[Number(raw)];document.getElementById('pincode').value=o?o.pincode:'';document.getElementById('officeName').value=o?o.officeName:'';document.getElementById('officeType').value=o?o.officeType:'';}
 async function loadDeliveryTab(){
@@ -938,8 +938,21 @@ async function loadAll(){
  if(!sb){status('Supabase connection is not ready.','err');return;}
  status('Loading office list and delivery records…');
  try{
-   const {data:od,error:oe}=await sb.from('ntd_master').select('pincode,office_name,office_type').order('office_name').limit(20000);if(oe)throw oe;
-   offices=(od||[]).filter(o=>TD_OFFICE_ALLOWLIST.has(tdOfficeKey(o.pincode,o.office_name))).map((o,i)=>({...o,officeName:o.office_name,officeType:o.office_type,officeKey:String(i)}));populateOffices();
+   // Read ntd_master in pages: the TD office list may be beyond the first 20,000 rows.
+   // Keep only offices explicitly present in the TD Villages allowlist.
+   const officeRows=[];
+   const pageSize=1000;
+   for(let from=0; ; from+=pageSize){
+     const {data:page,error:pageError}=await sb.from('ntd_master')
+       .select('pincode,office_name,office_type').order('office_name').range(from,from+pageSize-1);
+     if(pageError)throw pageError;
+     officeRows.push(...(page||[]));
+     if(!page||page.length<pageSize)break;
+   }
+   offices=officeRows
+     .filter(o=>TD_OFFICE_ALLOWLIST.has(tdOfficeKey(o.pincode,o.office_name)))
+     .map((o,i)=>({...o,officeName:o.office_name,officeType:o.office_type,officeKey:String(i)}));
+   populateOffices();
    const {data:rd,error:re}=await sb.from('delivery_places').select('*').order('office_name').limit(5000);if(re)throw re;
    records=(rd||[]).map(r=>({...r,officeName:r.office_name,officeType:r.office_type,locatedVillage:r.located_village,deliveryPlaces:r.delivery_places,deliveryBeat:r.delivery_beat,remarks:r.remarks}));renderRecords();status('Offices: '+offices.length+' | Delivery records: '+records.length+(currentUser?' | Google Login: '+(currentUser.email||'Signed in'):' | Public view; Add is available'),'ok');
     document.getElementById('adminModeBtn').textContent=currentUser?'Sign Out ('+(currentUser.email||'Google User')+')':'Google Login for Edit';
