@@ -962,37 +962,33 @@ async function signOutDelivery(){
 }
 async function loadAll(){
  if(!sb){status('Supabase connection is not ready.','err');return;}
- status('Loading office list and delivery records…');
+ status('Delivery records ಲೋಡ್ ಆಗುತ್ತಿದೆ…');
  try{
-   // Read ntd_master in pages: the TD office list may be beyond the first 20,000 rows.
-   // Keep only offices explicitly present in the TD Villages allowlist.
-   const officeRows=[];
-   const pageSize=1000;
-   for(let from=0; ; from+=pageSize){
-     const {data:page,error:pageError}=await sb.from('ntd_master')
-       .select('pincode,office_name,office_type').order('office_name').range(from,from+pageSize-1);
-     if(pageError)throw pageError;
-     officeRows.push(...(page||[]));
-     if(!page||page.length<pageSize)break;
+   // Build TD office dropdown locally from the provided TD allowlist.
+   // Do not download the entire All-India ntd_master table when opening this tab.
+   if(!offices.length){
+     offices=Array.from(TD_OFFICE_ALLOWLIST).map((entry,i)=>{
+       const parts=entry.split('|');
+       const pin=String(parts[0]||'').trim();
+       const listedName=String(parts.slice(1).join('|')||'').trim();
+       const officeName=titleOfficeName(listedName);
+       const officeType=officeTypeFromName(listedName)||'Branch Office';
+       return {pincode:pin,office_name:officeName,office_type:officeType,
+         officeName,officeType,officeKey:String(i)};
+     });
    }
-   // Build the TD dropdown from the supplied allowlist so name-format differences
-   // in ntd_master cannot silently remove valid TD offices.
-   const masterByKey=new Map();
-   officeRows.forEach(o=>masterByKey.set(tdOfficeKey(o.pincode,o.office_name),o));
-   offices=Array.from(TD_OFFICE_ALLOWLIST).map((entry,i)=>{
-     const parts=entry.split('|');
-     const pin=String(parts[0]||'').trim();
-     const listedName=String(parts.slice(1).join('|')||'').trim();
-     const master=masterByKey.get(tdOfficeKey(pin,listedName));
-     const officeName=master?.office_name||titleOfficeName(listedName);
-     const officeType=master?.office_type||officeTypeFromName(listedName)||'Branch Office';
-     return {pincode:pin,office_name:officeName,office_type:officeType,
-       officeName,officeType,officeKey:String(i)};
-   });
    populateOffices();
-   const {data:rd,error:re}=await sb.from('delivery_places').select('*').order('office_name').limit(5000);if(re)throw re;
-   records=(rd||[]).map(r=>({...r,officeName:r.office_name,officeType:r.office_type,locatedVillage:r.located_village,deliveryPlaces:r.delivery_places,deliveryBeat:r.delivery_beat,remarks:r.remarks}));renderRecords();status('Offices: '+offices.length+' | Delivery records: '+records.length+(currentUser?' | Google Login: '+(currentUser.email||'Signed in'):' | Public view; Add is available'),'ok');
-    document.getElementById('adminModeBtn').textContent=currentUser?'Sign Out ('+(currentUser.email||'Google User')+')':'Google Login for Edit';
+   const {data:rd,error:re}=await sb.from('delivery_places')
+     .select('*').order('office_name').limit(5000);
+   if(re)throw re;
+   records=(rd||[]).map(r=>({...r,officeName:r.office_name,officeType:r.office_type,
+     locatedVillage:r.located_village,deliveryPlaces:r.delivery_places,
+     deliveryBeat:r.delivery_beat,remarks:r.remarks}));
+   renderRecords();
+   status('TD Offices: '+offices.length+' | Delivery records: '+records.length+
+     (currentUser?' | Google Login: '+(currentUser.email||'Signed in'):' | Public view; Add is available'),'ok');
+   document.getElementById('adminModeBtn').textContent=
+     currentUser?'Sign Out ('+(currentUser.email||'Google User')+')':'Google Login for Edit';
  }catch(e){status('ಡೇಟಾ ಪಡೆಯಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+e.message,'err');}
 }
 function searchChanged(){renderRecords();const open=!document.getElementById('formPanel').classList.contains('hidden');if(open){const cur=document.getElementById('officeSelect').value;const o=cur===''?null:offices[Number(cur)];populateOffices(o?o.officeKey:'');}}
