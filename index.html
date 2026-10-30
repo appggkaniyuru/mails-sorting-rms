@@ -39,7 +39,7 @@ table{border-collapse:collapse;width:100%;min-width:950px;background:white}th,td
 <div class="field"><label for="officeType">Office Type</label><input id="officeType" readonly></div>
 <div class="field"><label for="locatedVillage">Located Village</label><input id="locatedVillage" placeholder="ಗ್ರಾಮದ ಹೆಸರು"></div>
 <div class="field wide"><label for="deliveryPlaces">Delivery Places *</label><input id="deliveryPlaces" required placeholder="Pre University College"><div class="hint">ಒಂದೇ ಹೆಸರನ್ನು ಬೇರೆ Office, Pincode ಅಥವಾ Beat‌ನಲ್ಲಿ ಸೇರಿಸಬಹುದು.</div></div>
-<div class="field"><label for="deliveryBeat">Delivery Beat *</label><input id="deliveryBeat" placeholder="Beat 1 / NA (optional)"></div>
+<div class="field"><label for="deliveryBeat">Delivery Beat</label><input id="deliveryBeat" placeholder="Beat 1 / NA (optional)"></div>
 <div class="field wide"><label for="remarks">Remarks</label><textarea id="remarks" rows="2" placeholder="ಹೆಚ್ಚುವರಿ ಮಾಹಿತಿ"></textarea></div>
 </div>
 <div class="toolbar" style="margin-top:15px"><button id="saveBtn" class="primary" type="submit">Save</button><button class="secondary" type="button" onclick="closeForm()">ರದ್ದುಮಾಡಿ</button></div>
@@ -946,20 +946,6 @@ async function loadDeliveryTab(){
  if(currentUser){const {data:roleData}=await sb.from('user_roles').select('role').eq('user_id',currentUser.id).maybeSingle();currentRole=roleData?.role||'user';}
  const b=document.getElementById('deliverySignInBtn');if(b)b.remove();
  await loadAll();
- // Resume the exact record the user selected before Google OAuth redirected away.
- // The pending ID is saved by editRecord() and must be applied only after records load.
- const pendingEditId=localStorage.getItem('deliveryEditAfterGoogleLogin');
- if(currentUser && pendingEditId){
-   const pendingRecord=records.find(x=>String(x.id)===String(pendingEditId));
-   localStorage.removeItem('deliveryEditAfterGoogleLogin');
-   if(pendingRecord){
-     document.getElementById('searchBox').value=String(pendingRecord.pincode||'');
-     renderRecords();
-     editRecord(pendingEditId);
-   }else{
-     status('ಆಯ್ಕೆ ಮಾಡಿದ Delivery Place ದಾಖಲೆ ಸಿಗಲಿಲ್ಲ. Refresh ಮಾಡಿ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.','err');
-   }
- }
 }
 async function signInForDelivery(){
  if(!sb){status('Supabase ಸಂಪರ್ಕ ಸಿದ್ಧವಾಗಿಲ್ಲ.','err');return;}
@@ -1103,18 +1089,42 @@ async function submitForm(e){
   }
 }
 async function removeRecord(id){if(currentRole!=='admin'){status('Delete ಮಾಡಲು Admin ಅನುಮತಿ ಅಗತ್ಯ.','err');return;}const r=records.find(x=>x.id===id);if(!r||!confirm('ಈ Delivery Place ಅಳಿಸಬೇಕೇ?\n'+r.deliveryPlaces+' — '+r.officeName))return;const {error}=await sb.from('delivery_places').delete().eq('id',id);if(error){status('ಅಳಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ: '+error.message,'err');return;}await loadAll();status('ದಾಖಲೆ ಅಳಿಸಲಾಗಿದೆ.','ok');}
+let pendingEditRunning = false;
+async function resumePendingDeliveryEdit(){
+  if(pendingEditRunning) return;
+  const pendingId=localStorage.getItem('deliveryEditAfterGoogleLogin');
+  if(!pendingId) return;
+  pendingEditRunning=true;
+  try{
+    // Read the completed OAuth session outside the auth-state callback.
+    const {data:{session},error}=await sb.auth.getSession();
+    if(error) throw error;
+    currentUser=session?.user||null;
+    if(!currentUser) return;
+    switchTab('delivery');
+    await loadDeliveryTab();
+    // Ensure the requested row is present before opening its edit form.
+    const row=records.find(x=>String(x.id)===String(pendingId));
+    if(!row){
+      status('ಆಯ್ಕೆ ಮಾಡಿದ ದಾಖಲೆ ಲೋಡ್ ಆಗಲಿಲ್ಲ. Refresh ಮಾಡಿ ಮತ್ತೆ Edit ಪ್ರಯತ್ನಿಸಿ.','err');
+      return;
+    }
+    localStorage.removeItem('deliveryEditAfterGoogleLogin');
+    editRecord(pendingId);
+  }catch(err){
+    status('Login ನಂತರ Edit ತೆರೆಯುವಲ್ಲಿ ದೋಷ: '+(err.message||'Unknown error'),'err');
+  }finally{pendingEditRunning=false;}
+}
 if(initSupabase()){
  document.getElementById('ntdStatus').textContent='PIN Code ಅಥವಾ Office Name ನಮೂದಿಸಿ ಹುಡುಕಿ.';
  sb.auth.onAuthStateChange((event,session)=>{
-   currentUser=session?.user||null;currentRole=currentUser?'user':'public';
-   if(!document.getElementById('deliveryTab').classList.contains('hidden'))setTimeout(()=>loadDeliveryTab(),0);
+   currentUser=session?.user||null;
+   // Do not await Supabase queries inside this callback; defer to avoid auth-lock deadlocks.
+   setTimeout(()=>{
+     if(localStorage.getItem('deliveryEditAfterGoogleLogin')) resumePendingDeliveryEdit();
+     else if(!document.getElementById('deliveryTab').classList.contains('hidden')) loadDeliveryTab();
+   },250);
  });
- window.addEventListener('load',async()=>{
-   const {data:{session}}=await sb.auth.getSession();currentUser=session?.user||null;
-   if(currentUser){
-     const pendingId=localStorage.getItem('deliveryEditAfterGoogleLogin');
-     if(pendingId){localStorage.removeItem('deliveryEditAfterGoogleLogin');switchTab('delivery');await loadDeliveryTab();editRecord(pendingId);}
-   }
- });
+ window.addEventListener('load',()=>{setTimeout(()=>resumePendingDeliveryEdit(),400);});
 }
 </script></body></html>
